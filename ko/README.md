@@ -1,4 +1,3 @@
-```markdown
 # AI Agent DID, Delegation & OPA Security MCP Server
 
 Spring Boot와 Spring AI MCP Server로 만든 **AI Agent DID 신원/권한위임/정책집행 보안 실험 프로젝트**.
@@ -565,4 +564,3 @@ terraform plan
 ## 설계 원칙
 
 > LLM의 주장을 믿지 않고 신원, 권한, 정책, 서명, 감사 증거로만 검증한다.
-```
