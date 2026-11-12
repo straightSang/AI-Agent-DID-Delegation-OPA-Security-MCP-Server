@@ -1,0 +1,2 @@
+# Manage configuration only in application.yml in this directory.
+# This file is intentionally empty to prevent duplicate settings and typo conflicts.

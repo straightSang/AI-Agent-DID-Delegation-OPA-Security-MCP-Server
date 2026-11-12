@@ -1,0 +1,7 @@
+server:
+  address: 127.0.0.1
+
+logging:
+  level:
+    io.github.straightsang.agentsecurity.mcp: INFO
+

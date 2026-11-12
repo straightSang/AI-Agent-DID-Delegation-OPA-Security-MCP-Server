@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!--
+    Maven 프로젝트 설정 파일
+
+    프로젝트의 기능들
+
+    1. Spring Boot 기반 HTTP 서버
+    2. Spring AI MCP Server
+    3. Streamable HTTP 또는 Stateless MCP
+    4. Spring Security JWT 인증
+    5. OPA HTTP 연동
+    6. Actuator health check
+    7. JUnit 기반 보안 테스트
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="
+             http://maven.apache.org/POM/4.0.0
+             https://maven.apache.org/xsd/maven-4.0.0.xsd">
+
+    <!-- Maven POM 4.0.0을 사용한다. -->
+    <modelVersion>4.0.0</modelVersion>
+
+    <!--
+        Spring Boot Parent POM.
+
+        다음 버전들을 자동으로 관리한다.
+
+        - Spring Framework
+        - Spring Security
+        - Jackson
+        - Tomcat
+        - JUnit
+        - Maven 플러그인
+
+        따라서 대부분의 Spring 의존성에는 개별 버전을 적지 않는다.
+    -->
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.2</version>
+
+        <!--
+            로컬 상위 pom.xml을 찾지 않고
+            Maven 저장소에서 Spring Boot Parent를 받도록 한다.
+        -->
+        <relativePath/>
+    </parent>
+
+    <!--
+        프로젝트의 고유 식별자.
+
+        groupId는 Java 패키지와 비슷한 프로젝트 소유 영역으로
+        GitHub 사용자 이름을 기준으로 io.github.straightsang을 사용했다.
+    -->
+    <groupId>io.github.straightsang</groupId>
+
+    <!-- 빌드 결과물과 프로젝트를 식별하는 이름이다. -->
+    <artifactId>agent-security-mcp</artifactId>
+
+    <!-- 현재 프로젝트 버전이다. SNAPSHOT은 개발 중이라는 의미다. -->
+    <version>0.1.0-SNAPSHOT</version>
+
+    <!-- Maven 기본값도 jar이지만 명시적으로 표시했다. -->
+    <packaging>jar</packaging>
+
+    <name>Agent Security MCP Server</name>
+
+    <description>
+        AI Agent identity, delegation and OPA protected MCP server
+    </description>
+
+    <!-- 공통 버전과 빌드 설정 -->
+    <properties>
+
+        <!--
+            컴파일과 실행 기준 Java 버전으로
+
+            Dockerfile에서도 Java 21 이미지를 사용하므로
+            pom.xml과 Dockerfile의 Java 버전이 일치해야 한다.
+        -->
+        <java.version>21</java.version>
+
+        <!--
+            현재 안정 버전인 Spring AI 2.0.2를 사용한다.
+            RC나 SNAPSHOT 버전은 초기 프로젝트에서 사용하지 않는다.
+        -->
+        <spring-ai.version>2.0.2</spring-ai.version>
+        <aws.sdk.version>2.31.78</aws.sdk.version>
+
+        <!-- 소스와 리소스 파일의 문자 인코딩 -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+    </properties>
+
+    <!--
+        Spring AI BOM을 가져온다.
+
+        BOM은 Bill of Materials의 약자다.
+        Spring AI에 포함된 모듈들의 호환 버전을 한 번에 관리한다.
+
+        BOM을 사용하기 때문에 아래 dependencies에서
+        spring-ai-starter-mcp-server-webmvc의 버전을 따로 쓰지 않는다.
+    -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+
+                <!-- 이 의존성은 실행 라이브러리가 아니라 버전 관리표에 해당한다. -->
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- AWS 운영 프로필: 공유 보안 상태(DynamoDB), 서명(KMS), WORM 앵커(S3) -->
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${aws.sdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+
+        <!--
+            Spring AI MCP 서버 핵심 의존성.
+
+            포함되는 주요 기능:
+
+            - WebMVC 기반 MCP 서버
+            - POST /mcp endpoint
+            - Streamable HTTP
+            - Stateless MCP
+            - @McpTool
+            - @McpResource
+            - @McpPrompt
+            - MCP JSON-RPC 처리
+
+            Spring MVC와 내장 Tomcat도 함께 제공한다.
+        -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+        </dependency>
+
+        <!--
+            입력값 검증 기능.
+
+            Java record나 DTO에 다음과 같은 검증을 사용할 수 있다.
+
+            - @NotNull
+            - @NotBlank
+            - @Size
+            - @Pattern
+            - @Valid
+
+            MCP 도구의 입력을 OPA로 보내기 전에 검증하는 데 사용한다.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!--
+            JWT Bearer Token을 검증하는 Spring Security 모듈.
+
+            이 의존성은 Spring Security 기본 기능도 함께 가져온다.
+            따라서 spring-boot-starter-security를 별도로 추가하지 않았다.
+
+            향후 다음과 연결할 수 있다.
+
+            - Amazon Cognito
+            - OIDC Provider
+            - 자체 JWT 발급 서버
+            - AgentCore 앞단 인증
+
+            주의:
+            MCP starter 자체는 /mcp를 자동으로 보호하지 않는다.
+            별도의 SecurityFilterChain 설정이 필요하다.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+
+        <!--
+            서버 상태 확인과 운영 관측 기능.
+
+            대표 endpoint:
+
+            - /actuator/health
+            - /actuator/info
+            - readiness/liveness 상태
+
+            Docker, ECS, Kubernetes의 health check에서 사용할 수 있다.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>dynamodb</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>kms</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+
+        <!--
+            @ConfigurationProperties 클래스의 메타데이터를 생성한다.
+
+            예를 들어 다음 설정의 IDE 자동완성을 지원한다.
+
+            security.opa.url
+            security.opa.timeout
+            security.delegation.audience
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+
+            <!--
+                실행 시 반드시 필요한 라이브러리는 아니므로
+                다른 프로젝트로 전파되지 않게 optional로 설정한다.
+            -->
+            <optional>true</optional>
+        </dependency>
+
+        <!--
+            Spring Boot 통합 테스트 의존성.
+
+            포함되는 주요 도구:
+
+            - JUnit 5
+            - Mockito
+            - AssertJ
+            - Spring Test
+            - MockMvc
+            - JSON 테스트 도구
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!--
+            Spring Security 테스트 지원.
+
+            다음과 같은 테스트에 사용한다.
+
+            - JWT가 없는 요청은 401
+            - 잘못된 audience는 401
+            - 권한이 없는 요청은 403
+            - 테스트용 JWT 주입
+        -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+
+        <!--
+            Maven이 생성하는 jar 이름을 application.jar로 고정한다.
+
+            기본값을 사용하면 다음처럼 버전이 파일명에 포함된다.
+
+            agent-security-mcp-0.1.0-SNAPSHOT.jar
+
+            이름을 고정하면 Dockerfile에서 다음 경로를 정확히 사용할 수 있다.
+
+            /workspace/target/application.jar
+        -->
+        <finalName>application</finalName>
+
+        <plugins>
+
+            <!--
+                일반 jar를 실행 가능한 Spring Boot jar로 바꾼다.
+
+                다음 명령으로 실행할 수 있게 만든다.
+
+                java -jar target/application.jar
+
+                Dockerfile의 ENTRYPOINT도 이 jar를 실행한다.
+            -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <!--
+                Java 컴파일 설정.
+
+                parameters=true가 중요한 이유:
+
+                Java는 기본적으로 컴파일 후 메서드 인자 이름을
+                arg0, arg1처럼 잃어버릴 수 있다.
+
+                MCP는 Java 메서드의 인자 이름을 이용해
+                JSON Schema를 만들 수 있으므로 실제 인자 이름을 보존한다.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+
+                <configuration>
+
+                    <!-- Java 21 API를 기준으로 컴파일한다. -->
+                    <release>${java.version}</release>
+
+                    <!-- 메서드 parameter 이름을 class 파일에 보존한다. -->
+                    <parameters>true</parameters>
+
+                </configuration>
+            </plugin>
+
+        </plugins>
+    </build>
+
+</project>

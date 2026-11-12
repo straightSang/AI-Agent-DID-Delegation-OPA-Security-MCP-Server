@@ -1,0 +1,9 @@
+spring:
+  main:
+    banner-mode: off
+
+security:
+  opa:
+    url: http://127.0.0.1:18181
+    timeout: 200ms
+

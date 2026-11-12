@@ -1,0 +1,48 @@
+server:
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  port: ${SERVER_PORT:8000}
+  shutdown: graceful
+
+spring:
+  application:
+    name: agent-security-mcp
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+  ai:
+    mcp:
+      server:
+        name: agent-security-mcp
+        version: 0.1.0
+        type: SYNC
+        protocol: STREAMABLE
+        annotation-scanner:
+          enabled: true
+        capabilities:
+          tool: true
+          resource: false
+          prompt: false
+          completion: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+security:
+  opa:
+    url: ${OPA_URL:http://127.0.0.1:8181}
+    timeout: 2s
+  delegation:
+    audience: agent-security-mcp
+    max-depth: 3
+    # 실제 실행 전 최초 위임자인 사용자 DID를 등록한다.
+    trusted-issuers: []
+  approval:
+    token-ttl: 2m
+    # 사용자 승인 서명을 신뢰할 DID를 등록한다. 빈 목록이면 고위험 요청은 모두 거부된다.
+    trusted-approvers: []

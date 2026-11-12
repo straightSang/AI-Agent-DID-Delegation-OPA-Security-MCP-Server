@@ -1,0 +1,15 @@
+target/
+.git/
+.idea/
+.vscode/
+*.iml
+*.log
+.env
+.env.*
+keys/
+secrets/
+.secrets/
+*.pem
+*.key
+application-prod.yml
+

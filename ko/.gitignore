@@ -1,0 +1,25 @@
+# Maven / Java build output
+target/
+*.class
+*.jar
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Local environment and logs
+.env
+.env.*
+*.log
+
+# 로컬 사용자와 Agent의 개인키 및 학습용 토큰은 Git에 올리지 않는다.
+.secrets/
+secrets/
+keys/
+*.pem
+*.key
+
+# 운영 환경의 비밀 설정은 별도로 관리한다.
+application-prod.yml
+
