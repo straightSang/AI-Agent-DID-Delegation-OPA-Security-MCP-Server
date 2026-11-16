@@ -46,3 +46,41 @@ security:
     token-ttl: 2m
     # 사용자 승인 서명을 신뢰할 DID를 등록한다. 빈 목록이면 고위험 요청은 모두 거부된다.
     trusted-approvers: []
+  approval-policy:
+    # HIGH 위험 요청에 필요한 서로 다른 승인자 수. 2 이상이면 M-of-N이며 trusted-approvers가 그 수 이상이어야 한다.
+    high-required-approvals: 1
+    # 승인자가 한도와 범위를 서명해 두는 사전 승인(승인 채널) 사용 여부와 상한
+    channel-enabled: true
+    channel-max-uses: 10
+    channel-max-ttl: 1h
+  audit:
+    # 비워 두면 메모리에만 저장한다(재시작하면 사라진다). 지정하면 재시작 후에도 이어 쓰고 시작할 때 전부 검증한다.
+    ledger-path: ${AUDIT_LEDGER_PATH:}
+    # 비워 두면 실행할 때마다 새 키를 만든다(재시작하면 이전 원장의 서명이 검증되지 않는다).
+    # 개인키 파일이므로 git에 올리지 않는다(.secrets/ 는 .gitignore 대상).
+    gateway-key-path: ${GATEWAY_KEY_PATH:}
+    anchor:
+      # disabled | opentimestamps. 체크포인트의 Merkle root 해시만 공개 타임스탬프 서버에 제출한다.
+      type: disabled
+      calendars:
+        - https://alice.btc.calendar.opentimestamps.org
+        - https://bob.btc.calendar.opentimestamps.org
+      directory: audit-anchors/ots
+  rate-limit:
+    # Agent DID별 분당 요청 수. 0이면 제한하지 않는다.
+    per-minute: 60
+  ground-truth:
+    max-depth: 3
+    max-token-ttl: 24h
+    max-fan-out: 10
+    tool-pin-file: ${TOOL_PIN_FILE:ground-truth/tool-pins.tsv}
+    pin-code-digest: false
+    # true면 앙상블이 BLOCK을 내린 요청을 실제로 거부한다. false면 기록만 남긴다(도입 초기 관찰용).
+    enforce: true
+    trusted-publishers:
+      - local
+    ensemble:
+      # 2단계 판정 모델 서버. 비어 있으면 규칙과 어휘 탐지기만 쓴다.
+      # 요청/응답 형식은 HttpModelDetector 주석을 본다.
+      model-endpoints: []
+      timeout: 8s

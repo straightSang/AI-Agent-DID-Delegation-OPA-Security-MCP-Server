@@ -23,3 +23,8 @@ keys/
 # 운영 환경의 비밀 설정은 별도로 관리한다.
 application-prod.yml
 
+
+# 런타임 산출물
+audit-anchors/
+ground-truth/
+*ledger*.tsv

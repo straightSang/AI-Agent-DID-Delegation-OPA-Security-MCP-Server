@@ -1,227 +1,171 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Agent 요청 승인</title>
-  <style>
-    :root {
-      color-scheme: light;
-      --surface: #f5f7f8;
-      --panel: #ffffff;
-      --ink: #172126;
-      --muted: #5d6b72;
-      --line: #d5dde1;
-      --accent: #087f6b;
-      --accent-dark: #056454;
-      --danger: #a33a32;
-      --radius: 12px;
-      font-family: "Segoe UI", "Noto Sans KR", sans-serif;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      min-height: 100dvh;
-      background: var(--surface);
-      color: var(--ink);
-    }
-    main {
-      width: min(760px, calc(100% - 32px));
-      margin: 0 auto;
-      padding: 56px 0;
-    }
-    header { margin-bottom: 28px; }
-    h1 { margin: 0 0 10px; font-size: clamp(28px, 6vw, 42px); letter-spacing: -0.04em; }
-    header p { margin: 0; max-width: 62ch; color: var(--muted); line-height: 1.65; }
-    .panel {
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: var(--panel);
-      padding: clamp(20px, 5vw, 34px);
-      box-shadow: 0 18px 46px rgba(34, 55, 63, 0.08);
-    }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
-    .field.full { grid-column: 1 / -1; }
-    label { display: block; margin-bottom: 7px; font-size: 13px; font-weight: 700; }
-    input {
-      width: 100%;
-      border: 1px solid #aebbc1;
-      border-radius: 8px;
-      padding: 12px 13px;
-      background: #fff;
-      color: var(--ink);
-      font: inherit;
-    }
-    input:focus-visible, button:focus-visible { outline: 3px solid rgba(8, 127, 107, 0.28); outline-offset: 2px; }
-    .actions { display: flex; gap: 10px; margin-top: 22px; }
-    button {
-      min-height: 44px;
-      border-radius: 8px;
-      border: 1px solid transparent;
-      padding: 0 18px;
-      font: inherit;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    button:active { transform: translateY(1px); }
-    .primary { background: var(--accent); color: #fff; }
-    .primary:hover { background: var(--accent-dark); }
-    .secondary { border-color: #9caab0; background: #fff; color: var(--ink); }
-    button:disabled { cursor: not-allowed; opacity: 0.55; }
-    .risk {
-      margin-top: 24px;
-      padding: 18px;
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      background: #f8faf9;
-    }
-    .risk[hidden], .result[hidden] { display: none; }
-    .risk-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; }
-    .risk h2 { margin: 0; font-size: 19px; }
-    .level { font: 700 12px ui-monospace, Consolas, monospace; color: var(--danger); }
-    .risk dl { display: grid; grid-template-columns: 92px 1fr; gap: 8px 14px; margin: 18px 0; }
-    .risk dt { color: var(--muted); }
-    .risk dd { margin: 0; overflow-wrap: anywhere; }
-    .risk ul { margin: 0; padding-left: 20px; color: #35454c; line-height: 1.65; }
-    .result {
-      margin-top: 20px;
-      border-left: 4px solid var(--accent);
-      padding: 14px 16px;
-      background: #edf7f4;
-      overflow-wrap: anywhere;
-    }
-    .error { color: var(--danger); border-left-color: var(--danger); background: #fff2f0; }
-    code { font: 12px/1.55 ui-monospace, Consolas, monospace; }
-    @media (max-width: 640px) {
-      main { padding: 28px 0; }
-      .grid { grid-template-columns: 1fr; }
-      .field.full { grid-column: auto; }
-      .actions { flex-direction: column; }
-      button { width: 100%; }
-    }
-    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>승인 서명 도구</title>
+<style>
+  :root { --bg:#f6f7fb; --card:#fff; --line:#dfe2ec; --ink:#1c2033; --sub:#5b6178; --brand:#5b4bf5; --bad:#c0392b; --good:#1e8e5a; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 system-ui, "Noto Sans KR", sans-serif; }
+  main { max-width: 920px; margin: 0 auto; padding: 28px 16px 80px; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  h2 { font-size: 16px; margin: 0 0 12px; }
+  p.lead { margin: 0 0 20px; color: var(--sub); }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  label { display:block; font-size: 13px; color: var(--sub); margin: 10px 0 4px; }
+  input, textarea { width:100%; padding: 8px 10px; border:1px solid var(--line); border-radius: 8px; font: 13px/1.5 ui-monospace, Menlo, Consolas, monospace; background:#fff; color: var(--ink); }
+  textarea { min-height: 70px; resize: vertical; }
+  button { margin-top: 12px; padding: 8px 16px; border: 0; border-radius: 8px; background: var(--brand); color:#fff; font-size: 14px; cursor: pointer; }
+  button.ghost { background: #eceefb; color: var(--brand); }
+  pre { background:#12142a; color:#e6e8ff; padding: 12px; border-radius: 8px; overflow:auto; font-size: 12px; white-space: pre-wrap; word-break: break-all; }
+  .row { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
+  .risk { padding: 10px 12px; border-radius: 8px; background:#fff6e5; border:1px solid #f1d9a6; margin-top: 10px; }
+  .risk.critical { background:#fdecea; border-color:#f3b8b1; }
+  .status { margin-top: 8px; font-size: 13px; }
+  .status.err { color: var(--bad); } .status.ok { color: var(--good); }
+  .note { font-size: 12px; color: var(--sub); margin-top: 6px; }
+</style>
 </head>
 <body>
 <main>
-  <header>
-    <h1>Agent 요청 승인</h1>
-    <p>실행 전에 행동, 대상, 위험을 확인하세요. 승인 토큰은 현재 요청 해시에만 결합되며 5분 후 만료되고 한 번만 사용할 수 있습니다.</p>
-  </header>
+  <h1>승인 서명 도구</h1>
+  <p class="lead">요청 내용을 확인하고, 승인자의 개인키로 승인 토큰이나 승인 채널에 서명합니다. 서명은 이 브라우저 안에서만 계산되고 개인키는 서버로 전송되지 않습니다.</p>
 
-  <section class="panel" aria-labelledby="request-title">
-    <h2 id="request-title" style="margin-top:0">승인할 요청</h2>
-    <div class="grid">
-      <div class="field full">
-        <label for="requestHash">요청 해시</label>
-        <input id="requestHash" autocomplete="off" required>
-      </div>
-      <div class="field full">
-        <label for="actorDid">Agent DID</label>
-        <input id="actorDid" autocomplete="off" required>
-      </div>
-      <div class="field">
-        <label for="action">행동</label>
-        <input id="action" placeholder="external_send" required>
-      </div>
-      <div class="field">
-        <label for="target">대상</label>
-        <input id="target" placeholder="recipient@example.com" required>
-      </div>
-    </div>
-    <div class="actions">
-      <button class="primary" id="assessButton" type="button">위험 확인</button>
-      <button class="secondary" id="clearButton" type="button">초기화</button>
-    </div>
+  <section>
+    <h2>1. 승인자 키 불러오기</h2>
+    <label>승인자 개인키 파일 (PKCS8, base64 텍스트)</label>
+    <input type="file" id="keyFile">
+    <label>승인자 DID (did:key)</label>
+    <input id="approverDid" placeholder="did:key:z...">
+    <div class="status" id="keyStatus"></div>
+    <div class="note">키는 이 페이지의 메모리에만 올라가며 새로고침하면 사라집니다. 개인키 파일은 공유 폴더나 저장소에 올리지 마세요.</div>
+  </section>
 
-    <section class="risk" id="riskPanel" hidden aria-live="polite">
-      <div class="risk-head">
-        <h2>승인 전 확인</h2>
-        <span class="level" id="riskLevel"></span>
-      </div>
-      <dl>
-        <dt>행동</dt><dd id="riskAction"></dd>
-        <dt>대상</dt><dd id="riskTarget"></dd>
-        <dt>정책 결과</dt><dd id="riskOutcome"></dd>
-      </dl>
-      <ul id="riskList"></ul>
-      <div class="actions">
-        <button class="primary" id="approveButton" type="button">위 내용을 확인하고 승인</button>
-        <button class="secondary" id="denyButton" type="button">거부</button>
-      </div>
-    </section>
-    <div class="result" id="result" hidden aria-live="assertive"></div>
+  <section>
+    <h2>2. 요청 확인 (승인 토큰)</h2>
+    <div class="row">
+      <div><label>요청한 Agent DID</label><input id="actorDid"></div>
+      <div><label>requestId</label><input id="requestId"></div>
+      <div><label>action</label><input id="action" placeholder="read_lab_document"></div>
+      <div><label>resource / target</label><input id="resource" placeholder="personal/customer.txt"></div>
+    </div>
+    <label>arguments (JSON)</label>
+    <textarea id="args">{"path": "personal/customer.txt"}</textarea>
+    <label>위임 체인의 tokenId (root부터, 한 줄에 하나)</label>
+    <textarea id="chainIds"></textarea>
+    <button id="prepareBtn">위험 설명 받기</button>
+    <div id="riskBox"></div>
+    <label>requestHash</label>
+    <input id="requestHash" readonly>
+    <button id="signBtn" class="ghost">승인 토큰 서명</button>
+    <div class="status" id="signStatus"></div>
+    <pre id="tokenOut" hidden></pre>
+    <div class="note">M-of-N 승인이 필요하면 서로 다른 승인자가 각자 이 화면에서 서명한 뒤 토큰을 모아 approvalToken과 additionalApprovalTokens에 나누어 넣습니다.</div>
+  </section>
+
+  <section>
+    <h2>3. 한도형 사전 승인 (승인 채널)</h2>
+    <div class="row">
+      <div><label>허용할 Agent DID</label><input id="chActor"></div>
+      <div><label>최대 사용 횟수</label><input id="chUses" value="3"></div>
+      <div><label>유효시간(초)</label><input id="chTtl" value="600"></div>
+      <div></div>
+    </div>
+    <label>허용 행동 (쉼표로 구분)</label>
+    <input id="chActions" placeholder="read_lab_document">
+    <label>허용 대상 (쉼표로 구분)</label>
+    <input id="chTargets" placeholder="personal/customer.txt">
+    <button id="channelBtn" class="ghost">채널 서명</button>
+    <div class="status" id="channelStatus"></div>
+    <pre id="channelOut" hidden></pre>
+    <div class="note">HIGH 위험 요청에만 쓸 수 있습니다. 한도와 범위가 서명에 포함되므로 값을 바꾸면 서버가 거부합니다.</div>
   </section>
 </main>
+
 <script>
-  const ids = ["requestHash", "actorDid", "action", "target"];
-  const value = id => document.getElementById(id).value.trim();
-  const payload = approved => ({
-    requestHash: value("requestHash"), actorDid: value("actorDid"),
-    action: value("action"), target: value("target"), approved
-  });
-  const result = document.getElementById("result");
-  const riskPanel = document.getElementById("riskPanel");
+  let privateKey = null;
+  const $ = (id) => document.getElementById(id);
 
-  function showMessage(text, error = false) {
-    result.hidden = false;
-    result.classList.toggle("error", error);
-    result.textContent = text;
+  function b64urlToBytes(text) {
+    const normalized = text.replace(/\s+/g, "").replace(/-/g, "+").replace(/_/g, "/");
+    const padded = normalized + "=".repeat((4 - normalized.length % 4) % 4);
+    const raw = atob(padded);
+    return Uint8Array.from(raw, (c) => c.charCodeAt(0));
+  }
+  function bytesToB64url(bytes) {
+    let raw = "";
+    new Uint8Array(bytes).forEach((b) => raw += String.fromCharCode(b));
+    return btoa(raw).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  }
+  function say(id, message, kind) { const el = $(id); el.textContent = message; el.className = "status " + (kind || ""); }
+  async function post(path, body) {
+    const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    if (!response.ok) throw new Error(path + " 요청이 실패했습니다 (" + response.status + ")");
+    return response.json();
+  }
+  async function sign(signingBytesB64url) {
+    if (!privateKey) throw new Error("먼저 승인자 개인키를 불러오세요.");
+    const signature = await crypto.subtle.sign({ name: "Ed25519" }, privateKey, b64urlToBytes(signingBytesB64url));
+    return bytesToB64url(signature);
   }
 
-  function validate() {
-    const missing = ids.find(id => !value(id));
-    if (!missing) return true;
-    document.getElementById(missing).focus();
-    showMessage("모든 요청 정보를 입력해야 합니다.", true);
-    return false;
-  }
-
-  document.getElementById("assessButton").addEventListener("click", async () => {
-    if (!validate()) return;
-    result.hidden = true;
+  $("keyFile").addEventListener("change", async (event) => {
     try {
-      const response = await fetch("/approvals/assess", {
-        method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(payload(false))
-      });
-      if (!response.ok) throw new Error("위험 평가 요청이 거부되었습니다.");
-      const assessment = await response.json();
-      document.getElementById("riskLevel").textContent = `위험 ${assessment.level}`;
-      document.getElementById("riskAction").textContent = assessment.actionSummary;
-      document.getElementById("riskTarget").textContent = assessment.target;
-      document.getElementById("riskOutcome").textContent = assessment.recommendedOutcome;
-      const list = document.getElementById("riskList");
-      list.replaceChildren(...assessment.risks.map(risk => {
-        const item = document.createElement("li"); item.textContent = risk; return item;
-      }));
-      riskPanel.hidden = false;
-      document.getElementById("approveButton").focus();
-    } catch (error) { showMessage(error.message, true); }
+      const text = await event.target.files[0].text();
+      privateKey = await crypto.subtle.importKey("pkcs8", b64urlToBytes(text), { name: "Ed25519" }, false, ["sign"]);
+      say("keyStatus", "키를 불러왔습니다. 승인자 DID를 입력하세요.", "ok");
+    } catch (error) {
+      privateKey = null;
+      say("keyStatus", "키를 읽지 못했습니다. 이 브라우저가 Ed25519 WebCrypto를 지원하는지, 파일이 PKCS8 base64인지 확인하세요.", "err");
+    }
   });
 
-  document.getElementById("approveButton").addEventListener("click", async () => {
-    const button = document.getElementById("approveButton");
-    button.disabled = true; button.textContent = "승인 토큰 발급 중";
+  $("prepareBtn").addEventListener("click", async () => {
     try {
-      const response = await fetch("/approvals/issue", {
-        method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(payload(true))
+      const ids = $("chainIds").value.split("\n").map((s) => s.trim()).filter(Boolean);
+      const resource = $("resource").value;
+      const result = await post("/approval/prepare", {
+        actorDid: $("actorDid").value, action: $("action").value, resource,
+        arguments: JSON.parse($("args").value || "{}"), requestId: $("requestId").value,
+        target: resource, delegationTokenIds: ids
       });
-      if (!response.ok) throw new Error("승인 토큰 발급에 실패했습니다.");
-      const token = await response.json();
-      showMessage(`승인 완료. tokenId: ${token.tokenId} / 만료: ${token.expiresAt}`);
-      riskPanel.hidden = true;
-    } catch (error) { showMessage(error.message, true); }
-    finally { button.disabled = false; button.textContent = "위 내용을 확인하고 승인"; }
+      $("requestHash").value = result.requestHash;
+      const a = result.assessment;
+      const box = $("riskBox");
+      box.className = "risk" + (a.riskLevel === "CRITICAL" ? " critical" : "");
+      box.textContent = "위험 등급 " + a.riskLevel + ", 처리 " + a.decision + ". " + a.executionSummary + " / " + a.risks.join(" ");
+    } catch (error) { say("signStatus", error.message, "err"); }
   });
 
-  document.getElementById("denyButton").addEventListener("click", () => {
-    riskPanel.hidden = true; showMessage("요청을 승인하지 않았습니다.", true);
+  $("signBtn").addEventListener("click", async () => {
+    try {
+      if (!$("requestHash").value) throw new Error("먼저 위험 설명을 받아 requestHash를 만드세요.");
+      const draft = await post("/approval/draft", {
+        requestHash: $("requestHash").value, actorDid: $("actorDid").value,
+        target: $("resource").value, approverDid: $("approverDid").value
+      });
+      draft.token.signature = await sign(draft.signingBytes);
+      $("tokenOut").hidden = false;
+      $("tokenOut").textContent = JSON.stringify(draft.token, null, 2);
+      say("signStatus", "서명했습니다. 토큰은 한 번만 사용할 수 있고 곧 만료됩니다.", "ok");
+    } catch (error) { say("signStatus", error.message, "err"); }
   });
-  document.getElementById("clearButton").addEventListener("click", () => {
-    ids.forEach(id => document.getElementById(id).value = "");
-    riskPanel.hidden = true; result.hidden = true; document.getElementById("requestHash").focus();
+
+  $("channelBtn").addEventListener("click", async () => {
+    try {
+      const split = (value) => value.split(",").map((s) => s.trim()).filter(Boolean);
+      const draft = await post("/approval/channel/draft", {
+        approverDid: $("approverDid").value, actorDid: $("chActor").value,
+        allowedActions: split($("chActions").value), allowedTargets: split($("chTargets").value),
+        maxUses: parseInt($("chUses").value, 10), ttlSeconds: parseInt($("chTtl").value, 10)
+      });
+      draft.grant.signature = await sign(draft.signingBytes);
+      $("channelOut").hidden = false;
+      $("channelOut").textContent = JSON.stringify(draft.grant, null, 2);
+      say("channelStatus", "서명했습니다. approvalChannelGrant 값으로 사용하세요.", "ok");
+    } catch (error) { say("channelStatus", error.message, "err"); }
   });
 </script>
 </body>

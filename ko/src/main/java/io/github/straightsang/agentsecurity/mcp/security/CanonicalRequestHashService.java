@@ -8,6 +8,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 
@@ -31,6 +32,38 @@ public class CanonicalRequestHashService {
             writeValue(output, arguments);
             writeString(output, requestId);
             writeString(output, target);
+            output.flush();
+            return sha256Hex(bytes.toByteArray());
+        } catch (IOException exception) {
+            throw new IllegalStateException("요청을 정규화하지 못했습니다.", exception);
+        }
+    }
+
+    /*
+     * 위임 체인과 audience까지 묶은 요청 해시다. 승인 뒤 위임 체인을 바꿔치기해도 해시가 달라진다.
+     * 기존 6개 인자 메서드와 해시 공간이 겹치지 않도록 버전 표지를 먼저 쓴다.
+     */
+    public String hashRequest(
+            String actorDid,
+            String action,
+            String resource,
+            Map<String, Object> arguments,
+            String requestId,
+            String target,
+            List<String> delegationTokenIds,
+            String audience) {
+        try {
+            ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+            DataOutputStream output = new DataOutputStream(bytes);
+            writeString(output, "REQUEST-V2");
+            writeString(output, actorDid);
+            writeString(output, action);
+            writeString(output, resource);
+            writeValue(output, arguments);
+            writeString(output, requestId);
+            writeString(output, target);
+            writeValue(output, delegationTokenIds == null ? List.of() : delegationTokenIds);
+            writeString(output, audience);
             output.flush();
             return sha256Hex(bytes.toByteArray());
         } catch (IOException exception) {

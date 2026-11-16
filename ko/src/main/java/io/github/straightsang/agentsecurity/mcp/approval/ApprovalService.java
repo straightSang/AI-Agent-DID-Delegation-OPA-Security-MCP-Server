@@ -3,35 +3,63 @@ package io.github.straightsang.agentsecurity.mcp.approval;
 import io.github.straightsang.agentsecurity.mcp.exception.AccessDeniedException;
 import io.github.straightsang.agentsecurity.mcp.identity.did.DidKeyService;
 import io.github.straightsang.agentsecurity.mcp.security.CommandIntegrityVerifier;
+import io.github.straightsang.agentsecurity.mcp.state.InMemorySecurityStateStore;
+import io.github.straightsang.agentsecurity.mcp.state.SecurityStateStore;
 import java.security.PrivateKey;
 import java.security.Signature;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
-import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-/* 승인 토큰의 서명, 만료, 요청 결합, 신뢰할 승인자, 일회 사용을 검사한다. */
+/*
+ * 승인 토큰의 서명, 만료, 요청 결합, 신뢰할 승인자, 일회 사용을 검사한다.
+ * 사용 완료 상태는 SecurityStateStore에 저장하므로 DynamoDB 구현을 쓰면 서버가 여러 대여도 일회 사용이 지켜진다.
+ */
 @Service
 public class ApprovalService {
     private final ApprovalProperties properties;
     private final ApprovalTokenCanonicalizer canonicalizer;
     private final DidKeyService didKeyService;
     private final CommandIntegrityVerifier integrityVerifier;
-    private final Set<String> consumedApprovalIds = ConcurrentHashMap.newKeySet();
+    private static final String NAMESPACE = "approval";
+    private final SecurityStateStore stateStore;
     private final Clock clock;
 
-    /* 운영용 생성자를 Spring이 선택하도록 명시한다. 아래 Clock 생성자는 테스트에서만 사용한다. */
-    @Autowired
+    /* 단위 테스트용: 메모리 상태 저장소를 쓴다. */
     public ApprovalService(
             ApprovalProperties properties,
             ApprovalTokenCanonicalizer canonicalizer,
             DidKeyService didKeyService,
             CommandIntegrityVerifier integrityVerifier) {
-        this(properties, canonicalizer, didKeyService, integrityVerifier, Clock.systemUTC());
+        this(properties, canonicalizer, didKeyService, integrityVerifier,
+                new InMemorySecurityStateStore(), Clock.systemUTC());
+    }
+
+    /* 운영용 생성자를 Spring이 선택하도록 명시한다. */
+    @Autowired
+    public ApprovalService(
+            ApprovalProperties properties,
+            ApprovalTokenCanonicalizer canonicalizer,
+            DidKeyService didKeyService,
+            CommandIntegrityVerifier integrityVerifier,
+            SecurityStateStore stateStore) {
+        this(properties, canonicalizer, didKeyService, integrityVerifier,
+                stateStore, Clock.systemUTC());
+    }
+
+    /* 테스트 전용: 시계를 바꿀 수 있다. */
+    ApprovalService(
+            ApprovalProperties properties,
+            ApprovalTokenCanonicalizer canonicalizer,
+            DidKeyService didKeyService,
+            CommandIntegrityVerifier integrityVerifier,
+            Clock clock) {
+        this(properties, canonicalizer, didKeyService, integrityVerifier,
+                new InMemorySecurityStateStore(), clock);
     }
 
     ApprovalService(
@@ -39,12 +67,26 @@ public class ApprovalService {
             ApprovalTokenCanonicalizer canonicalizer,
             DidKeyService didKeyService,
             CommandIntegrityVerifier integrityVerifier,
+            SecurityStateStore stateStore,
             Clock clock) {
         this.properties = properties;
         this.canonicalizer = canonicalizer;
         this.didKeyService = didKeyService;
         this.integrityVerifier = integrityVerifier;
+        this.stateStore = stateStore;
         this.clock = clock;
+    }
+
+    /* 승인자가 서명하기 전의 토큰 초안을 만든다. 서명할 바이트는 canonicalizer가 정한다. */
+    public ApprovalToken draft(String requestHash, String actorDid, String target, String approverDid) {
+        Instant issuedAt = Instant.now(clock);
+        return new ApprovalToken(
+                UUID.randomUUID().toString(), requestHash, actorDid, target, approverDid,
+                issuedAt, issuedAt.plus(properties.tokenTtl()), null);
+    }
+
+    public byte[] signingBytes(ApprovalToken unsignedToken) {
+        return canonicalizer.canonicalize(unsignedToken);
     }
 
     /* 로컬 테스트용 발급 메서드다. 운영 환경에서는 사용자 지갑/KMS가 서명한다. */
@@ -54,10 +96,7 @@ public class ApprovalService {
             String target,
             String approverDid,
             PrivateKey approverPrivateKey) {
-        Instant issuedAt = Instant.now(clock);
-        ApprovalToken unsigned = new ApprovalToken(
-                UUID.randomUUID().toString(), requestHash, actorDid, target, approverDid,
-                issuedAt, issuedAt.plus(properties.tokenTtl()), null);
+        ApprovalToken unsigned = draft(requestHash, actorDid, target, approverDid);
         try {
             Signature signer = Signature.getInstance("Ed25519");
             signer.initSign(approverPrivateKey);
@@ -69,7 +108,8 @@ public class ApprovalService {
         }
     }
 
-    public void verifyAndConsume(
+    /* 서명, 만료, 요청 결합, 승인자 신뢰, 미사용 여부를 검사하되 사용 처리는 하지 않는다. */
+    public void verifyOnly(
             ApprovalToken token,
             String expectedRequestHash,
             String expectedActorDid,
@@ -86,7 +126,7 @@ public class ApprovalService {
         if (!token.expiresAt().isAfter(Instant.now(clock))) {
             deny("사용자 승인 토큰이 만료되었습니다.");
         }
-        if (consumedApprovalIds.contains(token.approvalId())) {
+        if (stateStore.exists(NAMESPACE, token.approvalId(), Instant.now(clock))) {
             deny("이미 사용된 승인 토큰입니다.");
         }
 
@@ -102,9 +142,23 @@ public class ApprovalService {
             deny("사용자 승인 토큰 형식이 올바르지 않습니다.");
         }
 
-        if (!consumedApprovalIds.add(token.approvalId())) {
-            deny("이미 사용된 승인 토큰입니다.");
-        }
+    }
+
+    /* 검사를 통과한 토큰을 원자적으로 사용 처리한다. 동시에 두 번 쓰려 하면 한 번만 성공한다. */
+    public void consume(ApprovalToken token) {
+        boolean claimed = stateStore.putIfAbsent(
+                NAMESPACE, token.approvalId(), "consumed",
+                token.expiresAt().plus(Duration.ofHours(1)));
+        if (!claimed) deny("이미 사용된 승인 토큰입니다.");
+    }
+
+    public void verifyAndConsume(
+            ApprovalToken token,
+            String expectedRequestHash,
+            String expectedActorDid,
+            String expectedTarget) {
+        verifyOnly(token, expectedRequestHash, expectedActorDid, expectedTarget);
+        consume(token);
     }
 
     private void deny(String message) {

@@ -1,5 +1,6 @@
 package io.github.straightsang.agentsecurity.mcp.tools;
 
+import io.github.straightsang.agentsecurity.mcp.approval.ApprovalChannelGrant;
 import io.github.straightsang.agentsecurity.mcp.approval.ApprovalToken;
 import io.github.straightsang.agentsecurity.mcp.domain.DelegationToken;
 import io.github.straightsang.agentsecurity.mcp.gateway.SecurityGateway;
@@ -27,9 +28,14 @@ public class CalculatorTools {
             @McpToolParam(description = "root부터 현재 Agent까지 위임 토큰", required = true)
                     List<DelegationToken> delegationChain,
             @McpToolParam(description = "고위험 요청의 사용자 승인 토큰", required = false)
-                    ApprovalToken approvalToken) {
+                    ApprovalToken approvalToken,
+            @McpToolParam(description = "M-of-N 승인에서 추가로 받은 승인 토큰", required = false)
+                    List<ApprovalToken> additionalApprovalTokens,
+            @McpToolParam(description = "한도형 사전 승인(승인 채널). 승인 토큰 대신 사용", required = false)
+                    ApprovalChannelGrant approvalChannelGrant) {
         return securityGateway.executeAddition(
                 a, b, agentDid, challengeId, challengeSignature,
-                requestId, delegationChain, approvalToken);
+                requestId, delegationChain, approvalToken,
+                additionalApprovalTokens, approvalChannelGrant);
     }
 }

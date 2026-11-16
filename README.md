@@ -1,0 +1,1 @@
+[![M8ven Score](https://m8ven.ai/badge/mcp/straightsang-ai-agent-did-delegation-opa-security-mcp-server-1pjv4s?v=33f84bdd3a6ed613e17c2ebe3c84ba8b)](https://m8ven.ai/mcp/straightsang-ai-agent-did-delegation-opa-security-mcp-server-1pjv4s?s=readme)
